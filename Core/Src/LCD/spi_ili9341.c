@@ -429,7 +429,8 @@ void TFT9341_DrawChar(uint16_t x, uint16_t y, uint8_t c)
   height = lcdprop.pFont->Height;
   width  = lcdprop.pFont->Width;
   offset = 8 *((width + 7)/8) -  width ;
-  c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);
+  c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);	// c_t =0
+
   for(i = 0; i < height; i++)
   {
     pchar = ((uint8_t *)c_t + (width + 7)/8 * i);
@@ -446,26 +447,158 @@ void TFT9341_DrawChar(uint16_t x, uint16_t y, uint8_t c)
         line =  (pchar[0]<< 16) | (pchar[1]<< 8) | pchar[2];
         break;
     }
-    for (j = 0; j < width; j++)
+    for (j = 0; j < width; j++)								// print row pixel by pixel
     {
       if(line & (1 << (width- j + offset- 1)))
       {
-        TFT9341_DrawPixel((x + j), y, lcdprop.TextColor);
+        TFT9341_DrawPixel((x + j), y, lcdprop.TextColor);	// Print text pixel
       }
       else
       {
-        TFT9341_DrawPixel((x + j), y, lcdprop.BackColor);
+        TFT9341_DrawPixel((x + j), y, lcdprop.BackColor);	// Print background pixel
       }
     }
     y++;
   }
 }
 // ---------------------------------------------------------------------------------
+void TFT9341_DrawChar_DMA(uint16_t x, uint16_t y, uint8_t c)
+{
+	uint32_t i = 0, j = 0;
+	uint16_t height, width;
+	uint8_t offset;
+	uint8_t *c_t;
+	uint8_t *pchar;
+	uint32_t line=0;
+
+	int buf_index = 0;
+
+	height = lcdprop.pFont->Height;
+	width = lcdprop.pFont->Width;
+	offset = 8 *((width + 7)/8) - width ;
+	c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);
+
+	for(i = 0; i < height; i++)
+	{
+		pchar = ((uint8_t *)c_t + (width + 7)/8 * i);		//pchar == 0
+		switch(((width + 7)/8))
+		{
+			case 1:
+				line = pchar[0];
+				break;
+			case 2:
+				line = (pchar[0]<< 8) | pchar[1];
+				break;
+			case 3:
+			default:
+				line = (pchar[0]<< 16) | (pchar[1]<< 8) | pchar[2];
+				break;
+		}
+
+		for (j = 0; j < width; j++)
+		{
+			int buf_index = j + i*(width+1);
+			if(line & (1 << (width- j + offset- 1)))
+			{
+				frm_buf[buf_index*2] = lcdprop.TextColor >> 8;
+				frm_buf[buf_index*2+1] = lcdprop.TextColor & 0xFF;
+			}
+			else
+			{
+				frm_buf[buf_index*2] = lcdprop.BackColor >> 8;
+				frm_buf[buf_index*2+1] = lcdprop.BackColor & 0xFF;
+			}
+		}
+		y++;
+
+
+
+	}
+
+	TFT9341_SetAddrWindow(x, y, x+width, y+height);
+		DC_DATA();
+		dma_spi_cnt = 1;
+		HAL_SPI_Transmit_DMA(&hspi2, frm_buf, (width+1)*(height+1)*2);
+		while(!dma_spi_fl) {}			// OK
+		dma_spi_fl=0;
+
+		int ggg =99;		// For debug
+
+	//// Original
+
+}
+
+////////////////////////////////
+//void TFT9341_DrawChar_with_errors(uint16_t x, uint16_t y, uint8_t c)
+//{
+//	uint32_t i = 0, j = 0;
+//	uint16_t height, width;
+//	uint8_t offset;
+//	uint8_t *c_t;
+//	uint8_t *pchar;
+//	uint32_t line=0;
+//	height = lcdprop.pFont->Height;
+//	width = lcdprop.pFont->Width;
+//	offset = 8 *((width + 7)/8) — width ;
+//
+//	c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);
+//	for(i = 0; i < height; i++)
+//	{
+//		pchar = ((uint8_t *)c_t + (width + 7)/8 * i);
+//		switch(((width + 7)/8))
+//		{
+//		case 1:
+//			line = pchar[0];
+//			break;
+//		case 2:
+//			line = (pchar[0]<< 8) | pchar[1];
+//			break;
+//		case 3:
+//			default:
+//				line = (pchar[0]<< 16) | (pchar[1]<< 8) | pchar[2];
+//				break;
+//		}
+//
+//	for (j = 0; j < width; j++)
+//	{
+//		int buf_index = j + i*(width+1);
+//		if(line & (1 <> 8;
+//			frm_buf[buf_index*2+1] = lcdprop.TextColor & 0xFF;
+//		}
+//		else
+//		{
+//			frm_buf[buf_index*2] = lcdprop.BackColor >> 8;
+//			frm_buf[buf_index*2+1] = lcdprop.BackColor & 0xFF;
+//		}
+//	}
+//	y++;
+//	}
+//	TFT9341_SetAddrWindow(x, y, x+width, y+height);
+//	DC_DATA();
+//	dma_spi_cnt = 1;
+//	HAL_SPI_Transmit_DMA(&hspi2, frm_buf, (width+1)*(height+1)*2);
+//
+//	while(!dma_spi_fl) {}
+//	dma_spi_fl=0;
+//}
+/////////////////////////////////////////////////////////////////////
+
+// ---------------------------------------------------------------------------------
 void TFT9341_String(uint16_t x,uint16_t y, char *str)
 {
   while(*str)
   {
     TFT9341_DrawChar(x,y,str[0]);
+    x+=lcdprop.pFont->Width;
+    (void)*str++;
+  }
+}
+// ---------------------------------------------------------------------------------
+void TFT9341_String_DMA(uint16_t x,uint16_t y, char *str)
+{
+  while(*str)
+  {
+	TFT9341_DrawChar_DMA(x,y,str[0]);
     x+=lcdprop.pFont->Width;
     (void)*str++;
   }
@@ -499,58 +632,7 @@ void TFT9341_SetRotation(uint8_t r)
   }
 }
 // ---------------------------------------------------------------------------------
-void TFT9341_DrawChar_DMA(uint16_t x, uint16_t y, uint8_t c)
-{
-	uint32_t i = 0, j = 0;
-	uint16_t height, width;
-	uint8_t offset;
-	uint8_t *c_t;
-	uint8_t *pchar;
-	uint32_t line=0;
 
-	height = lcdprop.pFont->Height;
-	width = lcdprop.pFont->Width;
-	offset = 8 *((width + 7)/8) - width ;
-	c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);
-
-	for(i = 0; i < height; i++)
-	{
-		pchar = ((uint8_t *)c_t + (width + 7)/8 * i);
-		switch(((width + 7)/8))
-		{
-			case 1:
-				line = pchar[0];
-				break;
-			case 2:
-				line = (pchar[0]<< 8) | pchar[1];
-				break;
-			case 3:
-			default:
-				line = (pchar[0]<< 16) | (pchar[1]<< 8) | pchar[2];
-				break;
-		}
-
-		for (j = 0; j < width; j++)
-		{
-			int buf_index = j + i*(width+1);
-			if(line & (1 <> 8;
-			frm_buf[buf_index*2+1] = lcdprop.TextColor & 0xFF;
-		}
-		else
-		{
-			frm_buf[buf_index*2] = lcdprop.BackColor >> 8;
-			frm_buf[buf_index*2+1] = lcdprop.BackColor & 0xFF;
-		}
-	}
-	y++;
-
-	TFT9341_SetAddrWindow(x, y, x+width, y+height);
-	DC_DATA();
-	dma_spi_cnt = 1;
-	HAL_SPI_Transmit_DMA(&hspi2, frm_buf, (width+1)*(height+1)*2);
-	while(!dma_spi_fl) {}
-	dma_spi_fl=0;
-}
 
 
 // ---------------------------------------------------------------------------------

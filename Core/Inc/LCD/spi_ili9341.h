@@ -10,6 +10,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "LCD/fonts.h"
+
 //#include <cstdlib.h>
 
 void TFT9341_ini(uint16_t w_size, uint16_t h_size);
@@ -17,6 +18,10 @@ void TFT9341_FillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16
 void TFT9341_FillScreen(uint16_t color);
 void TFT9341_DrawPixel(int x, int y, uint16_t color);
 void TFT9341_DrawCircle(uint16_t x0, uint16_t y0, int r, uint16_t color);
+void TFT9341_String(uint16_t x,uint16_t y, char *str);
+
+void TFT9341_DrawChar_DMA(uint16_t x, uint16_t y, uint8_t c);
+void TFT9341_String_DMA(uint16_t x,uint16_t y, char *str);
 
 void speed_test(void);
 

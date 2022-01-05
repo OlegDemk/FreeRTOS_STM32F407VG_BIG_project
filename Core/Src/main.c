@@ -1651,27 +1651,50 @@ void Start_LCD(void *argument)
 
 	for(;;)
 	{
+
+//		TFT9341_DrawChar_DMA(100, 100, 'X');
+//		//TFT9341_DrawChar(100, 100, 'X');
+//		osDelay(200);
+//		TFT9341_FillScreen(TFT9341_BLUE);
+//		osDelay(200);
+
+
+
+		TFT9341_String(10,25, "ROW 1 qwertyuiop1234567890");
+		TFT9341_String(10,40, "ROW 2 qwertyuiop1234567890");
+		TFT9341_String(10,55, "ROW 3 qwertyuiop1234567890");
+		TFT9341_String(10,70, "ROW 4 qwertyuiop1234567890");
+		TFT9341_String(10,95, "ROW 5 qwertyuiop1234567890");
+		TFT9341_String(10,110, "ROW 6 qwertyuiop1234567890");
+		TFT9341_String(10,125, "ROW 7 qwertyuiop1234567890");
+		TFT9341_String(10,140, "ROW 8 qwertyuiop1234567890");
+		TFT9341_String(10,155, "ROW 9 qwertyuiop1234567890");
+		TFT9341_String(10,170, "ROW 10 qwertyuiop1234567890");
+		TFT9341_String(10,185, "ROW 11 qwertyuiop1234567890");
+		TFT9341_String(10,200, "ROW 12 qwertyuiop1234567890");
+		TFT9341_String(10,215, "ROW 13 qwertyuiop1234567890");
+
+		osDelay(1000);
 		TFT9341_FillScreen(TFT9341_BLUE);
-		osDelay(100);
-		TFT9341_FillScreen(TFT9341_RED);
-		osDelay(100);
-//		TFT9341_String(10,30, "ROW 1 qwertyuiop1234567890");
-//		TFT9341_String(10,45, "ROW 2 qwertyuiop1234567890");
-//		TFT9341_String(10,60, "ROW 3 qwertyuiop1234567890");
-//		TFT9341_String(10,75, "ROW 4 qwertyuiop1234567890");
-//		TFT9341_String(10,90, "ROW 5 qwertyuiop1234567890");
-//		TFT9341_String(10,105, "ROW 6 qwertyuiop1234567890");
-//		TFT9341_String(10,120, "ROW 7 qwertyuiop1234567890");
-//		TFT9341_String(10,135, "ROW 8 qwertyuiop1234567890");
-//		TFT9341_String(10,150, "ROW 9 qwertyuiop1234567890");
-//		TFT9341_String(10,165, "ROW 10 qwertyuiop1234567890");
-//		TFT9341_String(10,180, "ROW 11 qwertyuiop1234567890");
-//		TFT9341_String(10,195, "ROW 12 qwertyuiop1234567890");
-//		TFT9341_String(10,210, "ROW 13 qwertyuiop1234567890");
-//		TFT9341_String(10,225, "ROW 14 qwertyuiop1234567890");
+
+		TFT9341_String_DMA(10,25, "ROW 1 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,40, "ROW 2 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,55, "ROW 3 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,70, "ROW 4 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,95, "ROW 5 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,110, "ROW 6 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,125, "ROW 7 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,140, "ROW 8 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,155, "ROW 9 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,170, "ROW 10 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,185, "ROW 11 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,200, "ROW 12 qwertyuiop12345 DMA");
+		TFT9341_String_DMA(10,215, "ROW 13 qwertyuiop12345 DMA");
+
+		osDelay(1000);
+		TFT9341_FillScreen(TFT9341_BLUE);
 
 
-		//osDelay(1000);
 
 //	  // LCD speed test
 //	  speed_test();
