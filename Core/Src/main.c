@@ -175,7 +175,7 @@ const osThreadAttr_t AM2302_attributes = {
   .cb_size = sizeof(AM2302ControlBlock),
   .stack_mem = &AM2302Buffer[0],
   .stack_size = sizeof(AM2302Buffer),
-  .priority = (osPriority_t) osPriorityHigh4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for SD_CARD */
 osThreadId_t SD_CARDHandle;
@@ -1250,7 +1250,7 @@ void Start_Show_Resources(void *argument)
 	  strcat(msg.Buf, str_end_of_line);
 
 	  // add a hat
-	  strcat(msg.Buf, "| TASK NAME           | STATUS |   PRIOR	|  STACK  |    NUM  |\n\r\0");
+	  strcat(msg.Buf, "| TASK NAME  | STATUS | PRIOR | STACK | NUM |\n\r\0");
 
 	  vTaskList(str_management_memory_str);						// Fill in str_management_memory_str array management task information
 
@@ -1271,7 +1271,7 @@ void Start_Show_Resources(void *argument)
 
 	  // add a hat
 	  char str_line[] = {"-----------------------\n\r"};
-	  char str_head_2[] = {"| TASK NAME           | ABS TIME |              TASK TIME% |\n\r"};
+	  char str_head_2[] = {"| TASK NAME | ABS TIME | TASK TIME% |\n\r"};
 	  strcat(msg.Buf, str_line);
 	  strcat(msg.Buf, str_head_2);
 
@@ -1279,7 +1279,7 @@ void Start_Show_Resources(void *argument)
 
 	  vTaskGetRunTimeStats(str_management_memory_str);							// Function return how much time all functions running.
 
-	  buffer_size = buffer_size + i + (sizeof(str_line)-1) + (sizeof(str_head_2)-1);           // НЕ ВИВОДИТЬ СТРОКУ !!!!!!!!!!!!!!!!!! <<<<<<<<<<<<<<<<<<<
+	  buffer_size = buffer_size + i + (sizeof(str_line)-1) + (sizeof(str_head_2)-1);
 	  for(i = 0; str_management_memory_str[i] != '\0'; i++)
 	  {
 	  	// add data to queue
@@ -1645,20 +1645,33 @@ void Start_LCD(void *argument)
 	// Init LCD
 	TFT9341_ini(240, 320);
 	TFT9341_SetRotation(3);
-	TFT9341_SetTextColor(TFT9341_WHITE);  // ДОМАЛЮВАТИ СХЕКМУ ПІДКЛЮЧЕННЯ  !!!  І ОПИС ПРОЕКТУ
+	TFT9341_SetTextColor(TFT9341_WHITE);
 	TFT9341_SetBackColor(TFT9341_BLUE);
 	TFT9341_FillScreen(TFT9341_BLUE);
 
 	for(;;)
 	{
-		char str_buf[60] = {0};
-		// osMessageQueueGet waiting data on a queue (If data are in queue so print it)
-		osMessageQueueGet(LCDQueueHandle, &msg, 0, osWaitForever);			// Write for data on queue
-		strcat(str_buf, msg.buff);											// Copy data in buffer for print
-		TFT9341_String(30,30,str_buf);										// Print data on LCD
-		memset(str_buf, 0, sizeof(str_buf));
+		TFT9341_FillScreen(TFT9341_BLUE);
+		osDelay(100);
+		TFT9341_FillScreen(TFT9341_RED);
+		osDelay(100);
+//		TFT9341_String(10,30, "ROW 1 qwertyuiop1234567890");
+//		TFT9341_String(10,45, "ROW 2 qwertyuiop1234567890");
+//		TFT9341_String(10,60, "ROW 3 qwertyuiop1234567890");
+//		TFT9341_String(10,75, "ROW 4 qwertyuiop1234567890");
+//		TFT9341_String(10,90, "ROW 5 qwertyuiop1234567890");
+//		TFT9341_String(10,105, "ROW 6 qwertyuiop1234567890");
+//		TFT9341_String(10,120, "ROW 7 qwertyuiop1234567890");
+//		TFT9341_String(10,135, "ROW 8 qwertyuiop1234567890");
+//		TFT9341_String(10,150, "ROW 9 qwertyuiop1234567890");
+//		TFT9341_String(10,165, "ROW 10 qwertyuiop1234567890");
+//		TFT9341_String(10,180, "ROW 11 qwertyuiop1234567890");
+//		TFT9341_String(10,195, "ROW 12 qwertyuiop1234567890");
+//		TFT9341_String(10,210, "ROW 13 qwertyuiop1234567890");
+//		TFT9341_String(10,225, "ROW 14 qwertyuiop1234567890");
 
-		osDelay(200);
+
+		//osDelay(1000);
 
 //	  // LCD speed test
 //	  speed_test();
