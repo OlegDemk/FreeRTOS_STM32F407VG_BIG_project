@@ -499,7 +499,58 @@ void TFT9341_SetRotation(uint8_t r)
   }
 }
 // ---------------------------------------------------------------------------------
+void TFT9341_DrawChar_DMA(uint16_t x, uint16_t y, uint8_t c)
+{
+	uint32_t i = 0, j = 0;
+	uint16_t height, width;
+	uint8_t offset;
+	uint8_t *c_t;
+	uint8_t *pchar;
+	uint32_t line=0;
 
+	height = lcdprop.pFont->Height;
+	width = lcdprop.pFont->Width;
+	offset = 8 *((width + 7)/8) - width ;
+	c_t = (uint8_t*) &(lcdprop.pFont->table[(c-' ') * lcdprop.pFont->Height * ((lcdprop.pFont->Width + 7) / 8)]);
+
+	for(i = 0; i < height; i++)
+	{
+		pchar = ((uint8_t *)c_t + (width + 7)/8 * i);
+		switch(((width + 7)/8))
+		{
+			case 1:
+				line = pchar[0];
+				break;
+			case 2:
+				line = (pchar[0]<< 8) | pchar[1];
+				break;
+			case 3:
+			default:
+				line = (pchar[0]<< 16) | (pchar[1]<< 8) | pchar[2];
+				break;
+		}
+
+		for (j = 0; j < width; j++)
+		{
+			int buf_index = j + i*(width+1);
+			if(line & (1 <> 8;
+			frm_buf[buf_index*2+1] = lcdprop.TextColor & 0xFF;
+		}
+		else
+		{
+			frm_buf[buf_index*2] = lcdprop.BackColor >> 8;
+			frm_buf[buf_index*2+1] = lcdprop.BackColor & 0xFF;
+		}
+	}
+	y++;
+
+	TFT9341_SetAddrWindow(x, y, x+width, y+height);
+	DC_DATA();
+	dma_spi_cnt = 1;
+	HAL_SPI_Transmit_DMA(&hspi2, frm_buf, (width+1)*(height+1)*2);
+	while(!dma_spi_fl) {}
+	dma_spi_fl=0;
+}
 
 
 // ---------------------------------------------------------------------------------
