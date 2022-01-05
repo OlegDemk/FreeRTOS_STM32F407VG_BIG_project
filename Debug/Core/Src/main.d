@@ -62,9 +62,9 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../Core/Inc/SD_Card/File_Handling_RTOS.h ../Core/Inc/SD_Card/fatfs_sd.h \
  ../Middlewares/Third_Party/FatFs/src/diskio.h \
- ../Core/Inc/BME280/bme280_defs.h ../Core/Inc/BME280/bme280.h \
- ../Core/Inc/LCD/spi_ili9341.h ../Core/Inc/LCD/fonts.h \
- ../Core/Inc/LCD/ILI9341_Touchscreen.h
+ ../Core/Inc/sensors/BME280/bme280_defs.h \
+ ../Core/Inc/sensors/BME280/bme280.h ../Core/Inc/LCD/spi_ili9341.h \
+ ../Core/Inc/LCD/fonts.h ../Core/Inc/LCD/ILI9341_Touchscreen.h
 
 ../Core/Inc/main.h:
 
@@ -204,9 +204,9 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 
 ../Middlewares/Third_Party/FatFs/src/diskio.h:
 
-../Core/Inc/BME280/bme280_defs.h:
+../Core/Inc/sensors/BME280/bme280_defs.h:
 
-../Core/Inc/BME280/bme280.h:
+../Core/Inc/sensors/BME280/bme280.h:
 
 ../Core/Inc/LCD/spi_ili9341.h:
 

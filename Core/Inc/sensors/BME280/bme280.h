@@ -69,7 +69,7 @@ extern "C" {
 #endif
 
 /* Header includes */
-#include <BME280/bme280_defs.h>
+#include <sensors/BME280/bme280_defs.h>
 
 
 void my_print_readings(void);
