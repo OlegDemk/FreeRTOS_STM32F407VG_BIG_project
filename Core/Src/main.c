@@ -59,6 +59,12 @@ typedef struct							// Queue for Touch LCD
 	char buff[100];
 }LCDQUEUE;
 
+typedef struct
+{
+	char bme280_temperature_and_humidity[20];
+}BME280QUEUE;
+
+
 volatile unsigned long ulHighFreqebcyTimerTicks;		// This variable using for calculate how many time all tasks was running.
 char str_management_memory_str[1000] = {0};
 int freemem = 0;
@@ -234,6 +240,17 @@ const osMessageQueueAttr_t LCDQueue_attributes = {
   .cb_size = sizeof(LCDQueueControlBlock),
   .mq_mem = &LCDQueueBuffer,
   .mq_size = sizeof(LCDQueueBuffer)
+};
+/* Definitions for BME280_Queue */
+osMessageQueueId_t BME280_QueueHandle;
+uint8_t BME280_QueueBuffer[ 2 * sizeof( BME280QUEUE ) ];
+osStaticMessageQDef_t BME280_QueueControlBlock;
+const osMessageQueueAttr_t BME280_Queue_attributes = {
+  .name = "BME280_Queue",
+  .cb_mem = &BME280_QueueControlBlock,
+  .cb_size = sizeof(BME280_QueueControlBlock),
+  .mq_mem = &BME280_QueueBuffer,
+  .mq_size = sizeof(BME280_QueueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -422,6 +439,9 @@ int main(void)
 
   /* creation of LCDQueue */
   LCDQueueHandle = osMessageQueueNew (1, sizeof(LCDQUEUE), &LCDQueue_attributes);
+
+  /* creation of BME280_Queue */
+  BME280_QueueHandle = osMessageQueueNew (2, sizeof(BME280QUEUE), &BME280_Queue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -1333,7 +1353,9 @@ void Start_bme280(void *argument)
   /* USER CODE BEGIN Start_bme280 */
   /* Infinite loop */
 
-	QUEUE_t msg;												// Make a queue
+	//QUEUE_t msg;												// Make a queue
+
+	BME280QUEUE bme280_meg;
 	//memset(msg.Buf, 0, sizeof(msg.Buf));						// Fill in buff '\0'
 
 	uint16_t STATUS=0;
@@ -1380,47 +1402,53 @@ void Start_bme280(void *argument)
 	  char str_t_h_and_p[60] = {0};
 	  char str_thp_buffer[12] = {0};
 
-	  memset(msg.Buf, 0, sizeof(msg.Buf));								// Fill in buff '\0'
+	//  memset(msg.Buf, 0, sizeof(msg.Buf));								// Fill in buff '\0'
+	  memset(bme280_meg.bme280_temperature_and_humidity, 0, sizeof(bme280_meg.bme280_temperature_and_humidity));								// Fill in buff '\0'
+
 	  rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, &dev);		// Get data from sensor
 
 	  if(rslt == BME280_OK)
 	  {
 	  		// Save data variables
-	  		float BME280_temperature = comp_data.temperature;
-	  		float BME280_humidity = comp_data.humidity;
-	  		float BME280_preasure = comp_data.pressure;
+	  		int BME280_temperature = comp_data.temperature;
+	  		int BME280_humidity = comp_data.humidity;
+	  		int BME280_preasure = comp_data.pressure;
 
 	  		// Write T, H and P in str_t_h_and_p buffer
 	  		// Write TEMPERATURE
-	  		strcat(str_t_h_and_p, "      BEE280: \n\r");
-	  		strcat(str_t_h_and_p, "T: ");
-	  		sprintf(str_thp_buffer, "%f", BME280_temperature);
+//	  		strcat(str_t_h_and_p, "      BME280: \n\r");
+	  		strcat(str_t_h_and_p, "T");
+	  		sprintf(str_thp_buffer, "%d", BME280_temperature);
 	  		strcat(str_t_h_and_p, str_thp_buffer);
-	  		strcat(str_t_h_and_p, " C\n\r");
+	  		strcat(str_t_h_and_p, "C ");
 
 	  		// Write HUMIDYTY
-	  		memset(str_thp_buffer, 0, sizeof(str_thp_buffer));
-	  		strcat(str_t_h_and_p, "H: ");
-	  		sprintf(str_thp_buffer, "%f", BME280_humidity);
+	  		// memset(str_thp_buffer, 0, sizeof(str_thp_buffer));
+	  		strcat(str_t_h_and_p, "H");
+	  		sprintf(str_thp_buffer, "%d", BME280_humidity);
 	  		strcat(str_t_h_and_p, str_thp_buffer);
-	  		strcat(str_t_h_and_p, " C\n\r");
+	  		strcat(str_t_h_and_p, "% ");
 
 	  		// Write PRERASURE
-	  		memset(str_thp_buffer, 0, sizeof(str_thp_buffer));
-	  		strcat(str_t_h_and_p, "P: ");
-	  		sprintf(str_thp_buffer, "%f", BME280_preasure);
+	  		//memset(str_thp_buffer, 0, sizeof(str_thp_buffer));
+	  		strcat(str_t_h_and_p, "P");
+	  		sprintf(str_thp_buffer, "%d", BME280_preasure);
 	  		strcat(str_t_h_and_p, str_thp_buffer);
-	  		strcat(str_t_h_and_p, " mm\n\r\0");
+	  		//strcat(str_t_h_and_p, " mm\n\r\0");
 
-	  		strcat(msg.Buf, str_t_h_and_p);										//	Write main buffer with data in queue
+//	  		strcat(msg.Buf, str_t_h_and_p);										//	Write main buffer with data in queue
+//	  		osMessageQueuePut(UARTQueueHandle, &msg, 0, osWaitForever);			// Write data on queue (In will print on StartUART_Task task)
 
-	  		osMessageQueuePut(UARTQueueHandle, &msg, 0, osWaitForever);			// Write data on queue (In will print on StartUART_Task task)
-
+	  		strcat(bme280_meg.bme280_temperature_and_humidity, str_t_h_and_p);
+	  		osMessageQueuePut(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);
 	  }
 	  else
 	  {
-		  strcat(str_t_h_and_p, "ERROR!!! BME280 didn't found\n\r");
-		  osMessageQueuePut(UARTQueueHandle, &msg, 0, osWaitForever);			// Write data on queue (In will print on StartUART_Task task)
+		  strcat(str_t_h_and_p, "ERROR!!!");
+		  osMessageQueuePut(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);			// Write data on queue (In will print on StartUART_Task task)
+
+//		  strcat(bme280_meg.bme280_temperature_and_humidity, "ERROR");
+//		  osMessageQueuePut(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);
 	  }
 
   }
@@ -1641,7 +1669,7 @@ void Start_LCD(void *argument)
 {
   /* USER CODE BEGIN Start_LCD */
   /* Infinite loop */
-	LCDQUEUE msg;												// Make QUEUE
+	BME280QUEUE bme280_meg;
 
 	// Init LCD
 	TFT9341_ini(240, 320);
@@ -1650,17 +1678,30 @@ void Start_LCD(void *argument)
 	TFT9341_SetBackColor(TFT9341_BLUE);
 	TFT9341_FillScreen(TFT9341_BLUE);
 
+	// Init names sensors
+	TFT9341_String_DMA(2,30, "1.RTC ");
+	TFT9341_String_DMA(2,45, "2.AM2302");
+	TFT9341_String_DMA(2,60, "3.BME280");
+	TFT9341_String_DMA(2,75, "4.MPU6060 A");
+	TFT9341_String_DMA(2,90, "5.MPU6060 G");
+	TFT9341_String_DMA(2,105, "6.MPU6060 T");
+	TFT9341_String_DMA(2,120, "7.L883");
+	TFT9341_String_DMA(2,135, "8.BMP180");
+	TFT9341_String_DMA(2,150, "8.APDS9960");
+	TFT9341_String_DMA(2,165, "9.ADC");
+
 	for(;;)
 	{
 
-		osDelay(1000);
-		TFT9341_FillScreen(TFT9341_BLUE);
-		osDelay(1000);
-		TFT9341_FillScreen(TFT9341_RED);
+
+		// osMessageQueueGet waiting data on a queue (If data are in queue so print it)
+		osMessageQueueGet(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);
+		TFT9341_String(140, 60, bme280_meg.bme280_temperature_and_humidity);
+
+		int gggg = 999;
 
 
-
-
+		osDelay(100);
 
 //	  // LCD speed test
 //	  speed_test();
