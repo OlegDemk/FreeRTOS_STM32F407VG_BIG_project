@@ -28,9 +28,6 @@ typedef struct
 }LCD_DrawPropTypeDef;
 LCD_DrawPropTypeDef lcdprop;
 
-uint16_t TFT9341_WIDTH;
-uint16_t TFT9341_HEIGHT;
-
 // FOR DMA
 extern uint8_t dma_spi_fl;
 extern uint32_t dma_spi_cnt;
@@ -569,72 +566,4 @@ void TFT9341_SetRotation(uint8_t r)
       break;
   }
 }
-// ---------------------------------------------------------------------------------
-
-
-
-// ---------------------------------------------------------------------------------
-////////////////////////////// TEST function
-/* 	Compare without DMA and with DMA
- 1. Without DMA: 9 seconds
- 2. With DMA 1.6 seconds
- Select neaded variant in functions: TFT9341_FillRect and TFT9341_FillScreen.
-
- */
-void speed_test(void)
-{
-	HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
-	int i = 0;
-
-	// TEST 1
-	for(i = 0; i < 10; i++)
-	{
-		// TEST 1fill all dysplay random colors
-		TFT9341_FillScreen(TFT9341_RandColor());
-	    //osDelay(200);
-	}
-
-	// TEST 2
-	for(i = 0; i < 10; i++)
-	{
-		TFT9341_FillRect(0, 0, TFT9341_WIDTH/2-1, TFT9341_HEIGHT/2-1, TFT9341_RandColor());
-		TFT9341_FillRect(TFT9341_WIDTH/2, 0, TFT9341_WIDTH-1, TFT9341_HEIGHT/2-1, TFT9341_RandColor());
-		TFT9341_FillRect(0, TFT9341_HEIGHT/2, TFT9341_WIDTH/2-1, TFT9341_HEIGHT-1, TFT9341_RandColor());
-		TFT9341_FillRect(TFT9341_WIDTH/2, TFT9341_HEIGHT/2, TFT9341_WIDTH-1, TFT9341_HEIGHT-1, TFT9341_RandColor());
-	}
-
-	// TEST 3
-	TFT9341_FillScreen(TFT9341_BLACK);
-	for(i = 0; i < 100; i++)
-	{
-		TFT9341_DrawLine(TFT9341_RandColor(),
-		HAL_RNG_GetRandomNumber(&hrng)%TFT9341_WIDTH,
-		HAL_RNG_GetRandomNumber(&hrng)%TFT9341_HEIGHT,
-		HAL_RNG_GetRandomNumber(&hrng)%TFT9341_WIDTH,
-		HAL_RNG_GetRandomNumber(&hrng)%TFT9341_HEIGHT);
-	}
-	HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
-
-	i = 0;
-}
-// ---------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ---------------------------------------------------------------------------------

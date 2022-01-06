@@ -10,6 +10,7 @@ C_SRCS += \
 ../Core/Src/LCD/font16.c \
 ../Core/Src/LCD/font20.c \
 ../Core/Src/LCD/font24.c \
+../Core/Src/LCD/main_lcd.c \
 ../Core/Src/LCD/spi_ili9341.c 
 
 OBJS += \
@@ -18,6 +19,7 @@ OBJS += \
 ./Core/Src/LCD/font16.o \
 ./Core/Src/LCD/font20.o \
 ./Core/Src/LCD/font24.o \
+./Core/Src/LCD/main_lcd.o \
 ./Core/Src/LCD/spi_ili9341.o 
 
 C_DEPS += \
@@ -26,6 +28,7 @@ C_DEPS += \
 ./Core/Src/LCD/font16.d \
 ./Core/Src/LCD/font20.d \
 ./Core/Src/LCD/font24.d \
+./Core/Src/LCD/main_lcd.d \
 ./Core/Src/LCD/spi_ili9341.d 
 
 

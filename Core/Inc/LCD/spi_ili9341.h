@@ -11,7 +11,8 @@
 #include "stm32f4xx_hal.h"
 #include "LCD/fonts.h"
 
-//#include <cstdlib.h>
+uint16_t TFT9341_WIDTH;
+uint16_t TFT9341_HEIGHT;
 
 void TFT9341_ini(uint16_t w_size, uint16_t h_size);
 void TFT9341_FillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);

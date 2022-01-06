@@ -1595,6 +1595,7 @@ void Start_SD_CARD(void *argument)
   /* USER CODE BEGIN Start_SD_CARD */
   /* Infinite loop */
 
+	osDelay(1000);
 	Mount_SD("/");
 
 	Create_File("test_data_1.txt");
@@ -1652,48 +1653,12 @@ void Start_LCD(void *argument)
 	for(;;)
 	{
 
-//		TFT9341_DrawChar_DMA(100, 100, 'X');
-//		//TFT9341_DrawChar(100, 100, 'X');
-//		osDelay(200);
-//		TFT9341_FillScreen(TFT9341_BLUE);
-//		osDelay(200);
-
-
-
-		TFT9341_String(10,25, "ROW 1 qwertyuiop1234567890");
-		TFT9341_String(10,40, "ROW 2 qwertyuiop1234567890");
-		TFT9341_String(10,55, "ROW 3 qwertyuiop1234567890");
-		TFT9341_String(10,70, "ROW 4 qwertyuiop1234567890");
-		TFT9341_String(10,85, "ROW 5 qwertyuiop1234567890");
-		TFT9341_String(10,100, "ROW 6 qwertyuiop1234567890");
-		TFT9341_String(10,115, "ROW 7 qwertyuiop1234567890");
-		TFT9341_String(10,130, "ROW 8 qwertyuiop1234567890");
-		TFT9341_String(10,145, "ROW 9 qwertyuiop1234567890");
-		TFT9341_String(10,160, "ROW 10 qwertyuiop1234567890");
-		TFT9341_String(10,175, "ROW 11 qwertyuiop1234567890");
-		TFT9341_String(10,190, "ROW 12 qwertyuiop1234567890");
-		TFT9341_String(10,205, "ROW 13 qwertyuiop1234567890");
-
 		osDelay(1000);
 		TFT9341_FillScreen(TFT9341_BLUE);
-
-		TFT9341_String_DMA(10,25, "ROW 1 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,40, "ROW 2 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,55, "ROW 3 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,70, "ROW 4 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,85, "ROW 5 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,100, "ROW 6 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,115, "ROW 7 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,130, "ROW 8 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,145, "ROW 9 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,160, "ROW 10 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,175, "ROW 11 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,190, "ROW 12 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,205, "ROW 13 qwertyuiop12345 DMA");
-		TFT9341_String_DMA(10,220, "ROW 14 qwertyuiop12345 DMA");
-
 		osDelay(1000);
-		TFT9341_FillScreen(TFT9341_BLUE);
+		TFT9341_FillScreen(TFT9341_RED);
+
+
 
 
 

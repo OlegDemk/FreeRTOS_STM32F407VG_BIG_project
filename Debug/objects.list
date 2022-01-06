@@ -3,6 +3,7 @@
 "./Core/Src/LCD/font16.o"
 "./Core/Src/LCD/font20.o"
 "./Core/Src/LCD/font24.o"
+"./Core/Src/LCD/main_lcd.o"
 "./Core/Src/LCD/spi_ili9341.o"
 "./Core/Src/SD_Card/File_Handling_RTOS.o"
 "./Core/Src/SD_Card/fatfs_sd.o"
