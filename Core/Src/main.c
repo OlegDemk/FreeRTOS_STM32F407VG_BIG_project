@@ -41,7 +41,7 @@
 #include "LCD/spi_ili9341.h"
 #include "LCD/ILI9341_Touchscreen.h"
 
-
+#include "sensors/MEMS/mpu6050.h"
 
 /* USER CODE END Includes */
 
@@ -64,6 +64,20 @@ typedef struct
 	char bme280_temperature_and_humidity[20];
 }BME280QUEUE;
 
+typedef struct
+{
+	char mpu6050_acc_x_y_z[30];
+}MPU6050ACCQUEUE;
+
+typedef struct
+{
+	char mpu6050_gyro_x_y_z[30];
+}MPU6050GYROQUEUE;
+
+typedef struct
+{
+	char mpu6050_temp[10];
+}MPU6050TEMPQUEUE;
 
 volatile unsigned long ulHighFreqebcyTimerTicks;		// This variable using for calculate how many time all tasks was running.
 char str_management_memory_str[1000] = {0};
@@ -219,6 +233,18 @@ const osThreadAttr_t LCD_touchscreen_attributes = {
   .stack_size = sizeof(LCD_touchscreenBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for MPU6050 */
+osThreadId_t MPU6050Handle;
+uint32_t MPU6050Buffer[ 500 ];
+osStaticThreadDef_t MPU6050ControlBlock;
+const osThreadAttr_t MPU6050_attributes = {
+  .name = "MPU6050",
+  .cb_mem = &MPU6050ControlBlock,
+  .cb_size = sizeof(MPU6050ControlBlock),
+  .stack_mem = &MPU6050Buffer[0],
+  .stack_size = sizeof(MPU6050Buffer),
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for UARTQueue */
 osMessageQueueId_t UARTQueueHandle;
 uint8_t UARTQueueBuffer[ 10 * sizeof( QUEUE_t ) ];
@@ -251,6 +277,39 @@ const osMessageQueueAttr_t BME280_Queue_attributes = {
   .cb_size = sizeof(BME280_QueueControlBlock),
   .mq_mem = &BME280_QueueBuffer,
   .mq_size = sizeof(BME280_QueueBuffer)
+};
+/* Definitions for MPU6050_Acc_Queue */
+osMessageQueueId_t MPU6050_Acc_QueueHandle;
+uint8_t MPU6050_QueueBuffer[ 1 * sizeof( MPU6050ACCQUEUE ) ];
+osStaticMessageQDef_t MPU6050_QueueControlBlock;
+const osMessageQueueAttr_t MPU6050_Acc_Queue_attributes = {
+  .name = "MPU6050_Acc_Queue",
+  .cb_mem = &MPU6050_QueueControlBlock,
+  .cb_size = sizeof(MPU6050_QueueControlBlock),
+  .mq_mem = &MPU6050_QueueBuffer,
+  .mq_size = sizeof(MPU6050_QueueBuffer)
+};
+/* Definitions for MPU6050_Gyro_Queue */
+osMessageQueueId_t MPU6050_Gyro_QueueHandle;
+uint8_t MPU6050_Gyro_QueueBuffer[ 1 * sizeof( MPU6050GYROQUEUE ) ];
+osStaticMessageQDef_t MPU6050_Gyro_QueueControlBlock;
+const osMessageQueueAttr_t MPU6050_Gyro_Queue_attributes = {
+  .name = "MPU6050_Gyro_Queue",
+  .cb_mem = &MPU6050_Gyro_QueueControlBlock,
+  .cb_size = sizeof(MPU6050_Gyro_QueueControlBlock),
+  .mq_mem = &MPU6050_Gyro_QueueBuffer,
+  .mq_size = sizeof(MPU6050_Gyro_QueueBuffer)
+};
+/* Definitions for MPU6050_Temp_Queue */
+osMessageQueueId_t MPU6050_Temp_QueueHandle;
+uint8_t MPU6050_Temp_QueueBuffer[ 1 * sizeof( MPU6050TEMPQUEUE ) ];
+osStaticMessageQDef_t MPU6050_Temp_QueueControlBlock;
+const osMessageQueueAttr_t MPU6050_Temp_Queue_attributes = {
+  .name = "MPU6050_Temp_Queue",
+  .cb_mem = &MPU6050_Temp_QueueControlBlock,
+  .cb_size = sizeof(MPU6050_Temp_QueueControlBlock),
+  .mq_mem = &MPU6050_Temp_QueueBuffer,
+  .mq_size = sizeof(MPU6050_Temp_QueueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -349,6 +408,7 @@ void Start_AM2302(void *argument);
 void Start_SD_CARD(void *argument);
 void Start_LCD(void *argument);
 void Start_LCD_touchscreen(void *argument);
+void Start_MPU6050(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -443,6 +503,15 @@ int main(void)
   /* creation of BME280_Queue */
   BME280_QueueHandle = osMessageQueueNew (2, sizeof(BME280QUEUE), &BME280_Queue_attributes);
 
+  /* creation of MPU6050_Acc_Queue */
+  MPU6050_Acc_QueueHandle = osMessageQueueNew (1, sizeof(MPU6050ACCQUEUE), &MPU6050_Acc_Queue_attributes);
+
+  /* creation of MPU6050_Gyro_Queue */
+  MPU6050_Gyro_QueueHandle = osMessageQueueNew (1, sizeof(MPU6050GYROQUEUE), &MPU6050_Gyro_Queue_attributes);
+
+  /* creation of MPU6050_Temp_Queue */
+  MPU6050_Temp_QueueHandle = osMessageQueueNew (1, sizeof(MPU6050TEMPQUEUE), &MPU6050_Temp_Queue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -474,6 +543,9 @@ int main(void)
 
   /* creation of LCD_touchscreen */
   LCD_touchscreenHandle = osThreadNew(Start_LCD_touchscreen, NULL, &LCD_touchscreen_attributes);
+
+  /* creation of MPU6050 */
+  MPU6050Handle = osThreadNew(Start_MPU6050, NULL, &MPU6050_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -1670,6 +1742,7 @@ void Start_LCD(void *argument)
   /* USER CODE BEGIN Start_LCD */
   /* Infinite loop */
 	BME280QUEUE bme280_meg;
+	MPU6050ACCQUEUE mpu6050_acc_meg;
 
 	// Init LCD
 	TFT9341_ini(240, 320);
@@ -1682,9 +1755,9 @@ void Start_LCD(void *argument)
 	TFT9341_String_DMA(2,30, "1.RTC ");
 	TFT9341_String_DMA(2,45, "2.AM2302");
 	TFT9341_String_DMA(2,60, "3.BME280");
-	TFT9341_String_DMA(2,75, "4.MPU6060 A");
-	TFT9341_String_DMA(2,90, "5.MPU6060 G");
-	TFT9341_String_DMA(2,105, "6.MPU6060 T");
+	TFT9341_String_DMA(2,75, "4.MPU6050a");
+	TFT9341_String_DMA(2,90, "5.MPU6050g");
+	TFT9341_String_DMA(2,105, "6.MPU6050t");
 	TFT9341_String_DMA(2,120, "7.L883");
 	TFT9341_String_DMA(2,135, "8.BMP180");
 	TFT9341_String_DMA(2,150, "8.APDS9960");
@@ -1694,20 +1767,17 @@ void Start_LCD(void *argument)
 	{
 
 
-		// osMessageQueueGet waiting data on a queue (If data are in queue so print it)
+		// Waiting on BME280 data in queue
 		osMessageQueueGet(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);
-		TFT9341_String(140, 60, bme280_meg.bme280_temperature_and_humidity);
+		TFT9341_String(120, 60, bme280_meg.bme280_temperature_and_humidity);
 
-		int gggg = 999;
+		// Waiting on MPU6050 Acc data in queue
+		osMessageQueueGet(MPU6050_Acc_QueueHandle, &mpu6050_acc_meg, 0, osWaitForever);
+		TFT9341_String_DMA(120,75, mpu6050_acc_meg.mpu6050_acc_x_y_z);
+
 
 
 		osDelay(100);
-
-//	  // LCD speed test
-//	  speed_test();
-//	  TFT9341_FillScreen(TFT9341_BLACK);
-//	  osDelay(5000);
-//	  //
   }
   /* USER CODE END Start_LCD */
 }
@@ -1771,6 +1841,129 @@ void Start_LCD_touchscreen(void *argument)
     //osDelay(1);
   }
   /* USER CODE END Start_LCD_touchscreen */
+}
+
+/* USER CODE BEGIN Header_Start_MPU6050 */
+/**
+* @brief Function implementing the MPU6050 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Start_MPU6050 */
+void Start_MPU6050(void *argument)
+{
+  /* USER CODE BEGIN Start_MPU6050 */
+  /* Infinite loop */
+  MPU6050_t MPU6050;
+
+  MPU6050ACCQUEUE msg;
+
+  char mpu6050_acc[20] = {0};
+  char mpu6050_gyro[20] = {0};
+  char mpu6050_temp[8] = {0};
+
+  osDelay(500);
+
+  MPU6050_Init(&hi2c2);
+  osDelay(500);
+
+  //uint8_t pissition = 0;
+
+
+  for(;;)
+  {
+	  int i = 0;
+	  uint8_t start_pissition = 1;
+	  char mpu6050_buf[10] = {0};
+	  memset(msg.mpu6050_acc_x_y_z, 0, sizeof(msg.mpu6050_acc_x_y_z));
+
+	  MPU6050_Read_All(&hi2c2, &MPU6050);
+
+	  strcat(mpu6050_acc, "x");
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ax);
+	  // Read only first digits
+	  for(i = 0; i<=3; i++)
+	  {
+		  mpu6050_acc[start_pissition+i] = mpu6050_buf[i];
+	  }
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
+
+	  strcat(mpu6050_acc, " y");
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ay);
+
+	  // findings end of string
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_acc[i] != '\0');
+
+	  uint8_t j = 0;
+	  do{
+		  mpu6050_acc[i] = mpu6050_buf[j];
+		  i++;
+		  j++;
+	  }while(j<=3);				// Read only first digits
+
+
+	  strcat(mpu6050_acc, " z");
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ay);
+
+	  // findings end of string
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_acc[i] != '\0');
+
+	  j = 0;
+	  do{
+	  	mpu6050_acc[i] = mpu6050_buf[j];
+	  	i++;
+	  	j++;
+	  }while(j<=3);				// Read only first digits
+
+//		  mpu6050_acc[start_pissition + i] = mpu6050_buf[i];
+
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
+
+
+
+	  // Write in the queue
+	  strcat(msg.mpu6050_acc_x_y_z, mpu6050_acc);
+	  memset(mpu6050_acc, 0, sizeof(mpu6050_acc));
+
+	  osMessageQueuePut(MPU6050_Acc_QueueHandle, &msg, 0, osWaitForever);
+
+
+
+//
+//	  i++;
+//	  if(i >= 10)
+//	  {
+//		  int jjj = 999;
+//		  i = 0;
+//	  }
+
+
+
+//	  MPU6050.Ay
+//	  MPU6050.Az
+
+
+//	  memcopy(mpu6050_acc, MPU6050)
+
+	  // відправити чергу
+
+	  // Заповнити чергу гіроскопа
+	  // відправити чергу
+
+	  // Заповнити чергу температури
+	  // відправити чергу
+
+	  int gggg = 9999;
+
+    osDelay(1000);
+  }
+  /* USER CODE END Start_MPU6050 */
 }
 
 /**
