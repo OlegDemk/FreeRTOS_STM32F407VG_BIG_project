@@ -1743,6 +1743,7 @@ void Start_LCD(void *argument)
   /* Infinite loop */
 	BME280QUEUE bme280_meg;
 	MPU6050ACCQUEUE mpu6050_acc_meg;
+	MPU6050GYROQUEUE mpu6050_gyro_meg;
 
 	// Init LCD
 	TFT9341_ini(240, 320);
@@ -1774,6 +1775,10 @@ void Start_LCD(void *argument)
 		// Waiting on MPU6050 Acc data in queue
 		osMessageQueueGet(MPU6050_Acc_QueueHandle, &mpu6050_acc_meg, 0, osWaitForever);
 		TFT9341_String_DMA(120,75, mpu6050_acc_meg.mpu6050_acc_x_y_z);
+
+		// Waiting on MPU6050 Gyro data in queue
+		osMessageQueueGet(MPU6050_Gyro_QueueHandle, &mpu6050_gyro_meg, 0, osWaitForever);
+		TFT9341_String_DMA(120,90, mpu6050_gyro_meg.mpu6050_gyro_x_y_z);
 
 
 
@@ -1856,7 +1861,11 @@ void Start_MPU6050(void *argument)
   /* Infinite loop */
   MPU6050_t MPU6050;
 
-  MPU6050ACCQUEUE msg;
+  MPU6050ACCQUEUE msg_acc;
+  MPU6050GYROQUEUE msg_gyro;
+
+	//char mpu6050_gyro_x_y_z[30];
+
 
   char mpu6050_acc[20] = {0};
   char mpu6050_gyro[20] = {0};
@@ -1875,22 +1884,30 @@ void Start_MPU6050(void *argument)
 	  int i = 0;
 	  uint8_t start_pissition = 1;
 	  char mpu6050_buf[10] = {0};
-	  memset(msg.mpu6050_acc_x_y_z, 0, sizeof(msg.mpu6050_acc_x_y_z));
+	  memset(msg_acc.mpu6050_acc_x_y_z, 0, sizeof(msg_acc.mpu6050_acc_x_y_z));
+	  memset(msg_gyro.mpu6050_gyro_x_y_z, 0, sizeof(msg_gyro.mpu6050_gyro_x_y_z));
 
-	  MPU6050_Read_All(&hi2c2, &MPU6050);
+	  MPU6050_Read_All(&hi2c2, &MPU6050);					// Writr data in MPU6050 struct
 
-	  strcat(mpu6050_acc, "x");
+	  ////////////////// ACCELERATION
+	  // X
 	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ax);
+	  strcat(mpu6050_acc, "X");
 	  // Read only first digits
-	  for(i = 0; i<=3; i++)
-	  {
-		  mpu6050_acc[start_pissition+i] = mpu6050_buf[i];
-	  }
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_acc[i] != '\0');
+
+	  do{
+		  mpu6050_acc[i] = mpu6050_buf[i];
+		  i++;
+	  }while(i <= 3);										// Read only first digits
 	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
-	  strcat(mpu6050_acc, " y");
+	  // Y
 	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ay);
-
+	  strcat(mpu6050_acc, " Y");
 	  // findings end of string
 	  i = 0;
 	  do{
@@ -1902,12 +1919,12 @@ void Start_MPU6050(void *argument)
 		  mpu6050_acc[i] = mpu6050_buf[j];
 		  i++;
 		  j++;
-	  }while(j<=3);				// Read only first digits
+	  }while(j<=3);											// Read only first digits
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
-
-	  strcat(mpu6050_acc, " z");
-	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Ay);
-
+	  // Z
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Az);
+	  strcat(mpu6050_acc, " Z");
 	  // findings end of string
 	  i = 0;
 	  do{
@@ -1919,47 +1936,74 @@ void Start_MPU6050(void *argument)
 	  	mpu6050_acc[i] = mpu6050_buf[j];
 	  	i++;
 	  	j++;
-	  }while(j<=3);				// Read only first digits
-
-//		  mpu6050_acc[start_pissition + i] = mpu6050_buf[i];
-
+	  }while(j<=3);											// Read only first digits
 	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
-
-
-	  // Write in the queue
-	  strcat(msg.mpu6050_acc_x_y_z, mpu6050_acc);
+	  // Write in the acc queue
+	  strcat(msg_acc.mpu6050_acc_x_y_z, mpu6050_acc);
 	  memset(mpu6050_acc, 0, sizeof(mpu6050_acc));
+	  osMessageQueuePut(MPU6050_Acc_QueueHandle, &msg_acc, 0, osWaitForever);
 
-	  osMessageQueuePut(MPU6050_Acc_QueueHandle, &msg, 0, osWaitForever);
+	  ////////////////// GYRO
+	  // X
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Gx);
+	  strcat(mpu6050_gyro, "X");
+	  // Read only first digits
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_gyro[i] != '\0');
+
+	  do{
+		  mpu6050_gyro[i] = mpu6050_buf[i];
+	  	i++;
+	  }while(i <= 3);										// Read only first digits
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
+
+	  // Y
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Gy);
+	  strcat(mpu6050_gyro, " Y");
+	  // findings end of string
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_gyro[i] != '\0');
+
+	  j = 0;
+	  do{
+		  mpu6050_gyro[i] = mpu6050_buf[j];
+		  i++;
+		  j++;
+	  }while(j<=3);											// Read only first digits
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
+
+	  // Z
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Gz);
+	  strcat(mpu6050_gyro, " Z");
+	  // findings end of string
+	  i = 0;
+	  do{
+		  i++;
+	  }while(mpu6050_gyro[i] != '\0');
+
+	  j = 0;
+	  do{
+		  mpu6050_gyro[i] = mpu6050_buf[j];
+		  i++;
+	  	  j++;
+	  }while(j<=3);											// Read only first digits
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
+
+	  // Write in the acc queue
+	  strcat(msg_gyro.mpu6050_gyro_x_y_z, mpu6050_gyro);
+	  memset(mpu6050_gyro, 0, sizeof(mpu6050_gyro));
+	  osMessageQueuePut(MPU6050_Gyro_QueueHandle, &msg_gyro, 0, osWaitForever);
+
+	  ////////////////// TEMPERATURE
 
 
 
-//
-//	  i++;
-//	  if(i >= 10)
-//	  {
-//		  int jjj = 999;
-//		  i = 0;
-//	  }
 
-
-
-//	  MPU6050.Ay
-//	  MPU6050.Az
-
-
-//	  memcopy(mpu6050_acc, MPU6050)
-
-	  // відправити чергу
-
-	  // Заповнити чергу гіроскопа
-	  // відправити чергу
-
-	  // Заповнити чергу температури
-	  // відправити чергу
-
-	  int gggg = 9999;
 
     osDelay(1000);
   }
