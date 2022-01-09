@@ -1744,6 +1744,7 @@ void Start_LCD(void *argument)
 	BME280QUEUE bme280_meg;
 	MPU6050ACCQUEUE mpu6050_acc_meg;
 	MPU6050GYROQUEUE mpu6050_gyro_meg;
+	MPU6050TEMPQUEUE mpu6050_temperature_meg;
 
 	// Init LCD
 	TFT9341_ini(240, 320);
@@ -1779,6 +1780,10 @@ void Start_LCD(void *argument)
 		// Waiting on MPU6050 Gyro data in queue
 		osMessageQueueGet(MPU6050_Gyro_QueueHandle, &mpu6050_gyro_meg, 0, osWaitForever);
 		TFT9341_String_DMA(120,90, mpu6050_gyro_meg.mpu6050_gyro_x_y_z);
+
+		// Waiting on MPU6050 Temperature data in queue
+		osMessageQueueGet(MPU6050_Temp_QueueHandle, &mpu6050_temperature_meg, 0, osWaitForever);
+		TFT9341_String_DMA(120,105, mpu6050_temperature_meg.mpu6050_temp);
 
 
 
@@ -1863,13 +1868,14 @@ void Start_MPU6050(void *argument)
 
   MPU6050ACCQUEUE msg_acc;
   MPU6050GYROQUEUE msg_gyro;
+  MPU6050TEMPQUEUE msg_temp;
 
 	//char mpu6050_gyro_x_y_z[30];
 
 
   char mpu6050_acc[20] = {0};
   char mpu6050_gyro[20] = {0};
-  char mpu6050_temp[8] = {0};
+  char mpu6050_temp[10] = {0};
 
   osDelay(500);
 
@@ -1878,7 +1884,6 @@ void Start_MPU6050(void *argument)
 
   //uint8_t pissition = 0;
 
-
   for(;;)
   {
 	  int i = 0;
@@ -1886,6 +1891,7 @@ void Start_MPU6050(void *argument)
 	  char mpu6050_buf[10] = {0};
 	  memset(msg_acc.mpu6050_acc_x_y_z, 0, sizeof(msg_acc.mpu6050_acc_x_y_z));
 	  memset(msg_gyro.mpu6050_gyro_x_y_z, 0, sizeof(msg_gyro.mpu6050_gyro_x_y_z));
+	  memset(msg_temp.mpu6050_temp, 0, sizeof(msg_temp.mpu6050_temp));
 
 	  MPU6050_Read_All(&hi2c2, &MPU6050);					// Writr data in MPU6050 struct
 
@@ -2000,12 +2006,28 @@ void Start_MPU6050(void *argument)
 	  osMessageQueuePut(MPU6050_Gyro_QueueHandle, &msg_gyro, 0, osWaitForever);
 
 	  ////////////////// TEMPERATURE
+	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Temperature);
+	  strcat(mpu6050_temp, "T ");
+	  // Read only first digits
+	  i = 0;
+	  do{
+	 	i++;
+	  }while(mpu6050_temp[i] != '\0');
 
+	  j = 0;
+	  do{
+		  mpu6050_temp[i] = mpu6050_buf[j];
+	 	  i++;
+	 	  j++;
+	  }while(j <= 4);										// Read only first digits
+	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
+	  // Write in the acc queue
+	  strcat(msg_temp.mpu6050_temp, mpu6050_temp);
+	  memset(mpu6050_temp, 0, sizeof(mpu6050_temp));
+	  osMessageQueuePut(MPU6050_Temp_QueueHandle, &msg_temp, 0, osWaitForever);
 
-
-
-    osDelay(1000);
+      osDelay(1000);
   }
   /* USER CODE END Start_MPU6050 */
 }
