@@ -5,13 +5,16 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../Core/Src/sensors/MEMS/mpu6050.c 
+../Core/Src/sensors/MEMS/mpu6050.c \
+../Core/Src/sensors/MEMS/ms5611.c 
 
 OBJS += \
-./Core/Src/sensors/MEMS/mpu6050.o 
+./Core/Src/sensors/MEMS/mpu6050.o \
+./Core/Src/sensors/MEMS/ms5611.o 
 
 C_DEPS += \
-./Core/Src/sensors/MEMS/mpu6050.d 
+./Core/Src/sensors/MEMS/mpu6050.d \
+./Core/Src/sensors/MEMS/ms5611.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

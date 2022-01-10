@@ -65,7 +65,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Core/Inc/sensors/BME280/bme280_defs.h \
  ../Core/Inc/sensors/BME280/bme280.h ../Core/Inc/LCD/spi_ili9341.h \
  ../Core/Inc/LCD/fonts.h ../Core/Inc/LCD/ILI9341_Touchscreen.h \
- ../Core/Inc/sensors/MEMS/mpu6050.h
+ ../Core/Inc/sensors/MEMS/mpu6050.h ../Core/Inc/sensors/MEMS/ms5611.h
 
 ../Core/Inc/main.h:
 
@@ -216,3 +216,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/LCD/ILI9341_Touchscreen.h:
 
 ../Core/Inc/sensors/MEMS/mpu6050.h:
+
+../Core/Inc/sensors/MEMS/ms5611.h:

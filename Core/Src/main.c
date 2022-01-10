@@ -43,6 +43,8 @@
 
 #include "sensors/MEMS/mpu6050.h"
 
+#include "sensors/MEMS/ms5611.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,6 +81,14 @@ typedef struct
 	char mpu6050_temp[10];
 }MPU6050TEMPQUEUE;
 
+typedef struct
+{
+	char MS5611_mag_x_y_z_temp_and_pressure[30];
+}MS5611QUEUE;
+
+
+
+
 volatile unsigned long ulHighFreqebcyTimerTicks;		// This variable using for calculate how many time all tasks was running.
 char str_management_memory_str[1000] = {0};
 int freemem = 0;
@@ -96,6 +106,8 @@ extern uint16_t TFT9341_HEIGHT;
 uint8_t dma_spi_fl=0;
 uint32_t dma_spi_cnt=1;
 ////////////////////////////////////////
+// MS5611 sensor P and T
+extern uint32_t raw_pressure, raw_temperature;
 
 /* USER CODE END PTD */
 
@@ -245,6 +257,18 @@ const osThreadAttr_t MPU6050_attributes = {
   .stack_size = sizeof(MPU6050Buffer),
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for MS5611 */
+osThreadId_t MS5611Handle;
+uint32_t MS5611Buffer[ 128 ];
+osStaticThreadDef_t MS5611ControlBlock;
+const osThreadAttr_t MS5611_attributes = {
+  .name = "MS5611",
+  .cb_mem = &MS5611ControlBlock,
+  .cb_size = sizeof(MS5611ControlBlock),
+  .stack_mem = &MS5611Buffer[0],
+  .stack_size = sizeof(MS5611Buffer),
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for UARTQueue */
 osMessageQueueId_t UARTQueueHandle;
 uint8_t UARTQueueBuffer[ 10 * sizeof( QUEUE_t ) ];
@@ -310,6 +334,17 @@ const osMessageQueueAttr_t MPU6050_Temp_Queue_attributes = {
   .cb_size = sizeof(MPU6050_Temp_QueueControlBlock),
   .mq_mem = &MPU6050_Temp_QueueBuffer,
   .mq_size = sizeof(MPU6050_Temp_QueueBuffer)
+};
+/* Definitions for MS5611_mag_Queue */
+osMessageQueueId_t MS5611_mag_QueueHandle;
+uint8_t MS5611_mag_QueueBuffer[ 1 * sizeof( MS5611QUEUE ) ];
+osStaticMessageQDef_t MS5611_mag_QueueControlBlock;
+const osMessageQueueAttr_t MS5611_mag_Queue_attributes = {
+  .name = "MS5611_mag_Queue",
+  .cb_mem = &MS5611_mag_QueueControlBlock,
+  .cb_size = sizeof(MS5611_mag_QueueControlBlock),
+  .mq_mem = &MS5611_mag_QueueBuffer,
+  .mq_size = sizeof(MS5611_mag_QueueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -409,6 +444,7 @@ void Start_SD_CARD(void *argument);
 void Start_LCD(void *argument);
 void Start_LCD_touchscreen(void *argument);
 void Start_MPU6050(void *argument);
+void Start_MS5611(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -512,6 +548,9 @@ int main(void)
   /* creation of MPU6050_Temp_Queue */
   MPU6050_Temp_QueueHandle = osMessageQueueNew (1, sizeof(MPU6050TEMPQUEUE), &MPU6050_Temp_Queue_attributes);
 
+  /* creation of MS5611_mag_Queue */
+  MS5611_mag_QueueHandle = osMessageQueueNew (1, sizeof(MS5611QUEUE), &MS5611_mag_Queue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -546,6 +585,9 @@ int main(void)
 
   /* creation of MPU6050 */
   MPU6050Handle = osThreadNew(Start_MPU6050, NULL, &MPU6050_attributes);
+
+  /* creation of MS5611 */
+  MS5611Handle = osThreadNew(Start_MS5611, NULL, &MS5611_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -1745,6 +1787,8 @@ void Start_LCD(void *argument)
 	MPU6050ACCQUEUE mpu6050_acc_meg;
 	MPU6050GYROQUEUE mpu6050_gyro_meg;
 	MPU6050TEMPQUEUE mpu6050_temperature_meg;
+	MS5611QUEUE ms6050_temperature_and_pressure_meg;
+
 
 	// Init LCD
 	TFT9341_ini(240, 320);
@@ -1761,7 +1805,7 @@ void Start_LCD(void *argument)
 	TFT9341_String_DMA(2,90, "5.MPU6050g");
 	TFT9341_String_DMA(2,105, "6.MPU6050t");
 	TFT9341_String_DMA(2,120, "7.L883");
-	TFT9341_String_DMA(2,135, "8.BMP180");
+	TFT9341_String_DMA(2,135, "8.MS5611");
 	TFT9341_String_DMA(2,150, "8.APDS9960");
 	TFT9341_String_DMA(2,165, "9.ADC");
 
@@ -1785,6 +1829,9 @@ void Start_LCD(void *argument)
 		osMessageQueueGet(MPU6050_Temp_QueueHandle, &mpu6050_temperature_meg, 0, osWaitForever);
 		TFT9341_String_DMA(120,105, mpu6050_temperature_meg.mpu6050_temp);
 
+		// Waiting on MS5611 temperature and pressure data in queue
+		osMessageQueueGet(MS5611_mag_QueueHandle, &ms6050_temperature_and_pressure_meg, 0, osWaitForever);
+		TFT9341_String_DMA(120,135, ms6050_temperature_and_pressure_meg.MS5611_mag_x_y_z_temp_and_pressure);
 
 
 		osDelay(100);
@@ -2030,6 +2077,103 @@ void Start_MPU6050(void *argument)
       osDelay(1000);
   }
   /* USER CODE END Start_MPU6050 */
+}
+
+/* USER CODE BEGIN Header_Start_MS5611 */
+/**
+* @brief Function implementing the MS5611 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Start_MS5611 */
+void Start_MS5611(void *argument)
+{
+  /* USER CODE BEGIN Start_MS5611 */
+  /* Infinite loop */
+	MS5611QUEUE msg_mag;
+
+	osDelay(500);
+	//ms5611_init();
+
+	for(;;)
+	{
+//		ms5611_init();
+		//osDelay(100);
+
+		double temperature = 0;
+		double pressure = 0;
+		char ms5611_buf[30] = {0};
+		char buff[20] = {0};
+		uint8_t i = 0;
+		memset(msg_mag.MS5611_mag_x_y_z_temp_and_pressure, 0, sizeof(msg_mag.MS5611_mag_x_y_z_temp_and_pressure));
+
+		// Measure T and P from MS5611 sensor
+		ms5611_init();
+		ms5611_update();
+
+		strcat(ms5611_buf, "T:");
+
+		// Get data
+		temperature = ms5611_get_temperature();
+		pressure = ms5611_get_pressure();
+		pressure = (pressure*100) / 133.3;		// Convert
+
+		// Add temperature data in string
+		sprintf(buff, "%0.1f", temperature);
+		i = 0;
+		do{
+			i++;
+		}while(ms5611_buf[i] != '\0');
+
+		uint8_t j = 0;
+		do
+		{
+			ms5611_buf[i] = buff[j];
+			i++;
+			j++;
+		}while(j <= 5);
+		memset(buff, 0, sizeof(buff));
+		//strcat(ms5611_buf, " C");
+
+		// Add pressure data in string
+		strcat(ms5611_buf, " P:");
+		sprintf(buff, "%0.1f", pressure);
+		i = 0;
+		do{
+			i++;
+		}while(ms5611_buf[i] != '\0');
+
+		j = 0;
+		do
+		{
+			ms5611_buf[i] = buff[j];
+			i++;
+			j++;
+		}while(buff[j] != '\0');				// Read all digits
+		memset(buff, 0, sizeof(buff));
+		//strcat(ms5611_buf, " mm");
+
+		// Write in the queue
+		strcat(msg_mag.MS5611_mag_x_y_z_temp_and_pressure, ms5611_buf);
+		memset(ms5611_buf, 0, sizeof(ms5611_buf));
+		osMessageQueuePut(MS5611_mag_QueueHandle, &msg_mag, 0, osWaitForever);
+
+
+
+// 		int ffff = 99;
+
+//		sprintf(ms5611_buf ,"%0.2f" , temperature);
+//
+//		strcat(ms5611_buf, "  P:");
+
+//		pressure = ms5611_get_pressure();
+//		sprintf()
+
+
+
+		osDelay(1000);
+  }
+  /* USER CODE END Start_MS5611 */
 }
 
 /**
