@@ -1822,8 +1822,12 @@ void Start_LCD(void *argument)
 		TFT9341_String_DMA(120,75, mpu6050_acc_meg.mpu6050_acc_x_y_z);
 
 		// Waiting on MPU6050 Gyro data in queue
-		osMessageQueueGet(MPU6050_Gyro_QueueHandle, &mpu6050_gyro_meg, 0, osWaitForever);
+		osMessageQueueGet(MPU6050_Gyro_QueueHandle, &mpu6050_gyro_meg, 0, osWaitForever);   // ??????
 		TFT9341_String_DMA(120,90, mpu6050_gyro_meg.mpu6050_gyro_x_y_z);
+		if(mpu6050_gyro_meg.mpu6050_gyro_x_y_z[2] != '\0')
+		{
+			int gggggg =  9999;
+		}
 
 		// Waiting on MPU6050 Temperature data in queue
 		osMessageQueueGet(MPU6050_Temp_QueueHandle, &mpu6050_temperature_meg, 0, osWaitForever);
@@ -1948,14 +1952,16 @@ void Start_MPU6050(void *argument)
 	  strcat(mpu6050_acc, "X");
 	  // Read only first digits
 	  i = 0;
+	  uint8_t j = 0;
 	  do{
 		  i++;
 	  }while(mpu6050_acc[i] != '\0');
 
 	  do{
-		  mpu6050_acc[i] = mpu6050_buf[i];
+		  mpu6050_acc[i] = mpu6050_buf[j];
 		  i++;
-	  }while(i <= 3);										// Read only first digits
+		  j++;
+	  }while(j <= 3);										// Read only first digits
 	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
 	  // Y
@@ -1967,7 +1973,7 @@ void Start_MPU6050(void *argument)
 		  i++;
 	  }while(mpu6050_acc[i] != '\0');
 
-	  uint8_t j = 0;
+	  j = 0;
 	  do{
 		  mpu6050_acc[i] = mpu6050_buf[j];
 		  i++;
@@ -1998,19 +2004,22 @@ void Start_MPU6050(void *argument)
 	  osMessageQueuePut(MPU6050_Acc_QueueHandle, &msg_acc, 0, osWaitForever);
 
 	  ////////////////// GYRO
+	  memset(mpu6050_gyro, 0, sizeof(mpu6050_gyro));
 	  // X
 	  sprintf(mpu6050_buf ,"%f" ,MPU6050.Gx);
 	  strcat(mpu6050_gyro, "X");
 	  // Read only first digits
 	  i = 0;
+	  j = 0;
 	  do{
 		  i++;
 	  }while(mpu6050_gyro[i] != '\0');
 
 	  do{
-		  mpu6050_gyro[i] = mpu6050_buf[i];
-	  	i++;
-	  }while(i <= 3);										// Read only first digits
+		 mpu6050_gyro[i] = mpu6050_buf[j];
+	  	 i++;
+	  	 j++;
+	  }while(j <= 3);										// Read only first digits
 	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
 	  // Y
@@ -2047,9 +2056,21 @@ void Start_MPU6050(void *argument)
 	  }while(j<=3);											// Read only first digits
 	  memset(mpu6050_buf, 0, sizeof(mpu6050_buf));
 
+
+		if(mpu6050_gyro[2] != '\0')
+		{
+			int gggggg =  9999;
+		}
+
 	  // Write in the acc queue
 	  strcat(msg_gyro.mpu6050_gyro_x_y_z, mpu6050_gyro);
 	  memset(mpu6050_gyro, 0, sizeof(mpu6050_gyro));
+
+
+	  if(msg_gyro.mpu6050_gyro_x_y_z[2] != '\0')
+	  {
+	  			int gggggg =  9999;
+	  }
 	  osMessageQueuePut(MPU6050_Gyro_QueueHandle, &msg_gyro, 0, osWaitForever);
 
 	  ////////////////// TEMPERATURE
@@ -2137,7 +2158,7 @@ void Start_MS5611(void *argument)
 
 		// Add pressure data in string
 		strcat(ms5611_buf, " P:");
-		sprintf(buff, "%0.1f", pressure);
+		sprintf(buff, "%.0f", pressure);
 		i = 0;
 		do{
 			i++;
@@ -2151,25 +2172,12 @@ void Start_MS5611(void *argument)
 			j++;
 		}while(buff[j] != '\0');				// Read all digits
 		memset(buff, 0, sizeof(buff));
-		//strcat(ms5611_buf, " mm");
+		strcat(ms5611_buf, " mm");
 
 		// Write in the queue
 		strcat(msg_mag.MS5611_mag_x_y_z_temp_and_pressure, ms5611_buf);
 		memset(ms5611_buf, 0, sizeof(ms5611_buf));
 		osMessageQueuePut(MS5611_mag_QueueHandle, &msg_mag, 0, osWaitForever);
-
-
-
-// 		int ffff = 99;
-
-//		sprintf(ms5611_buf ,"%0.2f" , temperature);
-//
-//		strcat(ms5611_buf, "  P:");
-
-//		pressure = ms5611_get_pressure();
-//		sprintf()
-
-
 
 		osDelay(1000);
   }
