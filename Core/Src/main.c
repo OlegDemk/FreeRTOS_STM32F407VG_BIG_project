@@ -86,6 +86,11 @@ typedef struct
 	char MS5611_mag_x_y_z_temp_and_pressure[30];
 }MS5611QUEUE;
 
+typedef struct
+{
+	char ADC_value_and_voltage[30];
+}ADCQUEUE;
+
 
 
 
@@ -121,6 +126,8 @@ extern uint32_t raw_pressure, raw_temperature;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef hi2c3;
 
@@ -223,7 +230,7 @@ const osThreadAttr_t SD_CARD_attributes = {
 };
 /* Definitions for LCD */
 osThreadId_t LCDHandle;
-uint32_t LCDBuffer[ 1024 ];
+uint32_t LCDBuffer[ 1500 ];
 osStaticThreadDef_t LCDControlBlock;
 const osThreadAttr_t LCD_attributes = {
   .name = "LCD",
@@ -259,7 +266,7 @@ const osThreadAttr_t MPU6050_attributes = {
 };
 /* Definitions for MS5611 */
 osThreadId_t MS5611Handle;
-uint32_t MS5611Buffer[ 128 ];
+uint32_t MS5611Buffer[ 256 ];
 osStaticThreadDef_t MS5611ControlBlock;
 const osThreadAttr_t MS5611_attributes = {
   .name = "MS5611",
@@ -267,6 +274,18 @@ const osThreadAttr_t MS5611_attributes = {
   .cb_size = sizeof(MS5611ControlBlock),
   .stack_mem = &MS5611Buffer[0],
   .stack_size = sizeof(MS5611Buffer),
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for ADC */
+osThreadId_t ADCHandle;
+uint32_t ADCBuffer[ 500 ];
+osStaticThreadDef_t ADCControlBlock;
+const osThreadAttr_t ADC_attributes = {
+  .name = "ADC",
+  .cb_mem = &ADCControlBlock,
+  .cb_size = sizeof(ADCControlBlock),
+  .stack_mem = &ADCBuffer[0],
+  .stack_size = sizeof(ADCBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for UARTQueue */
@@ -345,6 +364,17 @@ const osMessageQueueAttr_t MS5611_mag_Queue_attributes = {
   .cb_size = sizeof(MS5611_mag_QueueControlBlock),
   .mq_mem = &MS5611_mag_QueueBuffer,
   .mq_size = sizeof(MS5611_mag_QueueBuffer)
+};
+/* Definitions for ADC_Queue */
+osMessageQueueId_t ADC_QueueHandle;
+uint8_t ADC_QueueBuffer[ 3 * sizeof( ADCQUEUE ) ];
+osStaticMessageQDef_t ADC_QueueControlBlock;
+const osMessageQueueAttr_t ADC_Queue_attributes = {
+  .name = "ADC_Queue",
+  .cb_mem = &ADC_QueueControlBlock,
+  .cb_size = sizeof(ADC_QueueControlBlock),
+  .mq_mem = &ADC_QueueBuffer,
+  .mq_size = sizeof(ADC_QueueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -434,6 +464,7 @@ static void MX_SPI2_Init(void);
 static void MX_DMA_Init(void);
 static void MX_RNG_Init(void);
 static void MX_I2C2_Init(void);
+static void MX_ADC1_Init(void);
 void StartDefaultTask(void *argument);
 void Start_RTC(void *argument);
 void Start_Show_Resources(void *argument);
@@ -445,6 +476,7 @@ void Start_LCD(void *argument);
 void Start_LCD_touchscreen(void *argument);
 void Start_MPU6050(void *argument);
 void Start_MS5611(void *argument);
+void Start_ADC(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -495,6 +527,7 @@ int main(void)
   MX_DMA_Init();
   MX_RNG_Init();
   MX_I2C2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);		//  This TIM3 using for calculate how many time all tasks was running.
 
@@ -551,6 +584,9 @@ int main(void)
   /* creation of MS5611_mag_Queue */
   MS5611_mag_QueueHandle = osMessageQueueNew (1, sizeof(MS5611QUEUE), &MS5611_mag_Queue_attributes);
 
+  /* creation of ADC_Queue */
+  ADC_QueueHandle = osMessageQueueNew (3, sizeof(ADCQUEUE), &ADC_Queue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -588,6 +624,9 @@ int main(void)
 
   /* creation of MS5611 */
   MS5611Handle = osThreadNew(Start_MS5611, NULL, &MS5611_attributes);
+
+  /* creation of ADC */
+  ADCHandle = osThreadNew(Start_ADC, NULL, &ADC_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -654,6 +693,56 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -1788,6 +1877,7 @@ void Start_LCD(void *argument)
 	MPU6050GYROQUEUE mpu6050_gyro_meg;
 	MPU6050TEMPQUEUE mpu6050_temperature_meg;
 	MS5611QUEUE ms6050_temperature_and_pressure_meg;
+	ADCQUEUE adc_meg;
 
 
 	// Init LCD
@@ -1811,8 +1901,6 @@ void Start_LCD(void *argument)
 
 	for(;;)
 	{
-
-
 		// Waiting on BME280 data in queue
 		osMessageQueueGet(BME280_QueueHandle, &bme280_meg, 0, osWaitForever);
 		TFT9341_String(120, 60, bme280_meg.bme280_temperature_and_humidity);
@@ -1838,7 +1926,16 @@ void Start_LCD(void *argument)
 		TFT9341_String_DMA(120,135, ms6050_temperature_and_pressure_meg.MS5611_mag_x_y_z_temp_and_pressure);
 
 
-		osDelay(100);
+//		char ADC_value_and_voltage[30];
+//		}ADCQUEUE;
+
+		// ADC_QueueHandle
+		// Waiting on MS5611 temperature and pressure data in queue
+
+//		osMessageQueueGet(ADC_QueueHandle, &adc_meg, 0, osWaitForever);
+//		TFT9341_String_DMA(120,165, adc_meg.ADC_value_and_voltage);
+
+		osDelay(1000);
   }
   /* USER CODE END Start_LCD */
 }
@@ -2172,16 +2269,63 @@ void Start_MS5611(void *argument)
 			j++;
 		}while(buff[j] != '\0');				// Read all digits
 		memset(buff, 0, sizeof(buff));
-		strcat(ms5611_buf, " mm");
+		strcat(ms5611_buf, " mm  ");
 
 		// Write in the queue
 		strcat(msg_mag.MS5611_mag_x_y_z_temp_and_pressure, ms5611_buf);
 		memset(ms5611_buf, 0, sizeof(ms5611_buf));
 		osMessageQueuePut(MS5611_mag_QueueHandle, &msg_mag, 0, osWaitForever);
 
-		osDelay(1000);
+		osDelay(500);
   }
   /* USER CODE END Start_MS5611 */
+}
+
+/* USER CODE BEGIN Header_Start_ADC */
+/**
+* @brief Function implementing the ADC thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Start_ADC */
+void Start_ADC(void *argument)
+{
+  /* USER CODE BEGIN Start_ADC */
+  /* Infinite loop */
+	//osDelay(2000);
+
+	ADCQUEUE msg;
+
+	HAL_ADC_Start(&hadc1);
+
+  for(;;)
+  {
+	  char adc_buff[30] = {0};
+	  char adc_buff_2[10] = {0};
+	  memset(msg.ADC_value_and_voltage, 0, sizeof(msg.ADC_value_and_voltage));
+
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 100);
+	  uint32_t adc_data = HAL_ADC_GetValue(&hadc1);
+	  // Convert in voltage
+	  float adc_voltage = adc_data*(3.3/4096);
+	  HAL_ADC_Stop(&hadc1);
+
+	  sprintf(adc_buff,"%d",adc_data);
+	  strcat(adc_buff, "  ");
+	  sprintf(adc_buff_2,"%.4f",adc_voltage);
+	  strcat(adc_buff, adc_buff_2);
+	  strcat(adc_buff, " V");
+
+	  // Write in the queue
+	  strcat(msg.ADC_value_and_voltage, adc_buff);
+	  memset(adc_buff, 0, sizeof(adc_buff));
+	  memset(adc_buff_2, 0, sizeof(adc_buff_2));
+	  //osMessageQueuePut(ADCHandle , &msg, 0, osWaitForever);
+
+	  osDelay(1000);
+  }
+  /* USER CODE END Start_ADC */
 }
 
 /**
